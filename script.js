@@ -32,7 +32,7 @@ source.search = function (query, type, order, filters) {
 };
 //Video
 source.isContentDetailsUrl = function (url) {
-  return url.includes("pmvhaven");
+  return url.includes("{");
 };
 source.getContentDetails = function (url) {
   return new HVideo(url);
@@ -67,7 +67,7 @@ class HVideo extends PlatformVideoDetails {
       // duration: flashvars.video_duration,
       // viewCount: views,
       thumbnails: new Thumbnails(json.thumbnails.map((a)=>new Thumbnail(a, 720))),
-      url: json.url,
+      url: url,
       isLive: false,
       description: json.description,
       video: new VideoSourceDescriptor([
@@ -176,10 +176,18 @@ class FeedPager extends ContentPager {
 
 
 function toVideo(a) {
+  const fakeurl=JSON.stringify({
+    type: "pmvhaven",
+    url: a.url,
+    title: a.title,
+    description: a.description,
+    thumbnails: a.thumbnails.filter((b)=>b!="placeholder"),
+    obj:a,
+  });
 return new PlatformVideo({
   id: new PlatformID(
     "PMVHaven",
-    a.url,
+    fakeurl,
     config.id
   ),
   name: a.title,
@@ -193,14 +201,7 @@ return new PlatformVideo({
   //   uploadDate: 1696880568,
   duration: a.duration,
   viewCount: a.views,
-  url: JSON.stringify({
-    type: "pmvhaven",
-    url: a.url,
-    title: a.title,
-    description: a.description,
-    thumbnails: a.thumbnails.filter((b)=>b!="placeholder"),
-    obj:a,
-  }),
+  url: fakeurl,
   isLive: false,
 });
 }
