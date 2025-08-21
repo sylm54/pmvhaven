@@ -124,9 +124,10 @@ class HVideo extends PlatformVideoDetails {
       isLive: false,
       description: description,
       video: new VideoSourceDescriptor([
-        alturl?new VideoUrlSource({
+        (alturl!=null&&alturl!=undefined)?new VideoUrlSource({
           container: "video/mp4",
-          name: "mp4",
+          name: "x264",
+          codec: "H.264",
           url: alturl,
         }):null,
         new VideoUrlSource({
@@ -134,14 +135,21 @@ class HVideo extends PlatformVideoDetails {
           name: "mp4",
           url: vidurl,
         }),
-      ]),
+      ].filter((a)=>a!=null)),
     });
+    this.data= {
+      id: id,
+      title: rawtitle,
+    };
+  }
+
+  getContentRecommendations() {
     let res2=http.POST("https://pmvhaven.com/api/v2/videoInput", JSON.stringify({
       mode: "getRecommended",
       profile: null,
       video: {
-        _id: id,
-        title: rawtitle,
+        _id: this.data.id,
+        title: this.data.rawtitle,
       },
     }),{}, false);
     if (!res.isOk) {
@@ -152,9 +160,6 @@ class HVideo extends PlatformVideoDetails {
       return;
     }
     this.recvids = json2.recommendedVideos.map((a)=>toVideo(a));
-  }
-
-  getContentRecommendations() {
     return new ContentPager(this.recvids, false);
   }
 }
