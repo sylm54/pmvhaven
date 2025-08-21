@@ -152,7 +152,7 @@ class HVideo extends PlatformVideoDetails {
         title: this.data.rawtitle,
       },
     }),{}, false);
-    if (!res.isOk) {
+    if (!res2.isOk) {
       throw new ScriptException("Error trying to load 'https://pmvhaven.com/api/v2/videoInput'");
     }
     const json2 = JSON.parse(res2.body);
