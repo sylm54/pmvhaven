@@ -102,13 +102,17 @@ class HVideo extends PlatformVideoDetails {
     log("GOT VIDEOOBJECT: "+JSON.stringify(videoobject));
     const title=json[videoobject.uploadTitle];
     log("GOT TITLE: "+title);
+    const rawtitle=json[videoobject.title];
     const description=json[videoobject.description];
     log("GOT DESCRIPTION: "+description);
     const thumbnails=json[videoobject.thumbnails].map((a)=>json[a]);
     log("GOT THUMBNAILS: "+JSON.stringify(thumbnails));
     const vidurl=json[videoobject.url];
     log("GOT VIDURL: "+vidurl);
-
+    const alturl=json[videoobject.videoUrl264];
+    log("GOT ALTURL: "+alturl);
+    const id=json[videoobject._id];
+    log("GOT ID: "+id);
     // let vidurl=dom.querySelector("source").getAttribute("src");
     // let vidname=dom.querySelector(".align-center .pl-2").text;
     log(json.url);
@@ -120,6 +124,11 @@ class HVideo extends PlatformVideoDetails {
       isLive: false,
       description: description,
       video: new VideoSourceDescriptor([
+        alturl?new VideoUrlSource({
+          container: "video/mp4",
+          name: "mp4",
+          url: alturl,
+        }):null,
         new VideoUrlSource({
           container: "video/mp4",
           name: "mp4",
@@ -127,24 +136,27 @@ class HVideo extends PlatformVideoDetails {
         }),
       ]),
     });
-    // let res=http.POST("https://pmvhaven.com/api/v2/videoInput", JSON.stringify({
-    //   mode: "getRecommended",
-    //   profile: null,
-    //   video: json.obj,
-    // }),{}, false);
-    // if (!res.isOk) {
-    //   throw new ScriptException("Error trying to load 'https://pmvhaven.com/api/v2/videoInput'");
-    // }
-    // const json2 = JSON.parse(res.body);
-    // if (!json2.recommendedVideos){
-    //   return;
-    // }
-    // this.recvids = json2.recommendedVideos.map((a)=>toVideo(a));
+    let res2=http.POST("https://pmvhaven.com/api/v2/videoInput", JSON.stringify({
+      mode: "getRecommended",
+      profile: null,
+      video: {
+        _id: id,
+        title: rawtitle,
+      },
+    }),{}, false);
+    if (!res.isOk) {
+      throw new ScriptException("Error trying to load 'https://pmvhaven.com/api/v2/videoInput'");
+    }
+    const json2 = JSON.parse(res2.body);
+    if (!json2.recommendedVideos){
+      return;
+    }
+    this.recvids = json2.recommendedVideos.map((a)=>toVideo(a));
   }
 
-  // getContentRecommendations() {
-  //   return new ContentPager(this.recvids, false);
-  // }
+  getContentRecommendations() {
+    return new ContentPager(this.recvids, false);
+  }
 }
 source.getContentRecommendations = (url, initialData) => {
   throw new ScriptException("getContentRecommendations");
