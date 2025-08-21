@@ -31,101 +31,120 @@ source.search = function (query, type, order, filters) {
   return new FeedPager({mode: "DefaultSearch", data: query, profile: null});
 };
 //Video
+/**
+ * 
+ * @param {string} url
+ * @returns 
+ */
 source.isContentDetailsUrl = function (url) {
-  return url.includes("{");
+  return url.startsWith("https://pmvhaven.com/video/");
 };
 source.getContentDetails = function (url) {
   return new HVideo(url);
 };
+/**
+ * 
+ * @param {any} data 
+ * @param {string[]} path
+ * @param {number} index 
+ * @returns any
+ */
+function parseNUXT(data, path, index=0) {
+  const curr=data[index];
+  const target=path[0];
+  log("Parsing with path "+JSON.stringify(path)+" and index "+index);
+  if(curr[0]=='ShallowReactive'){
+    log("ShallowReactive");
+    return parseNUXT(data, path, curr[1]);
+  }
+  if(Array.isArray(curr)){
+    if(curr.length==1){
+      log("Tiny Array");
+      return parseNUXT(data, path, curr[0]);
+    }
+    throw new ScriptException("Array has more than one element :" + curr.length);
+  }
+  if (typeof curr == "object"){
+    if(path.length==0){
+      log("Found object");
+      return index;
+    }
+    for(const key of Object.keys(curr)){
+      if(key==target){
+        if(path.length==1){
+          log("Found key "+key);
+          return parseNUXT(data, [], curr[key]);
+        }
+        log("Found key "+key+" in path "+path);
+        return parseNUXT(data, path.slice(1), curr[key]);
+      }
+    }
+  }
+
+  throw new ScriptException("Could not find key '"+target+"' in "+JSON.stringify(curr));
+}
 
 class HVideo extends PlatformVideoDetails {
   constructor(url) {
-    const json = JSON.parse(url);
-    // let res = http.GET(url, {}, false);
-    // if (!res.isOk) {
-    //   throw new ScriptException("Error trying to load '" + geturl + "'");
-    // }
-    // let dom = domParser.parseFromString(res.body);
+    let res = http.GET(url, {}, false);
+    if (!res.isOk) {
+      throw new ScriptException("Error trying to load '" + geturl + "'");
+    }
+    let dom = domParser.parseFromString(res.body);
+    let data=dom.querySelector("script#__NUXT_DATA__").text;
+    log("GOT DATA: "+data);
+    const json = JSON.parse(data);
+    const apiindex=parseNUXT(json, ["data", "/api/v2/videoInput"]);
+    log("GOT APIINDEX: "+JSON.stringify(apiindex));
+    const videoindex=parseNUXT(json, ["video"], apiindex);
+    log("GOT VIDEOINDEX: "+JSON.stringify(videoindex));
+    const videoobject=json[videoindex];
+    log("GOT VIDEOOBJECT: "+JSON.stringify(videoobject));
+    const title=json[videoobject.uploadTitle];
+    log("GOT TITLE: "+title);
+    const description=json[videoobject.description];
+    log("GOT DESCRIPTION: "+description);
+    const thumbnails=json[videoobject.thumbnails].map((a)=>json[a]);
+    log("GOT THUMBNAILS: "+JSON.stringify(thumbnails));
+    const vidurl=json[videoobject.url];
+    log("GOT VIDURL: "+vidurl);
+
     // let vidurl=dom.querySelector("source").getAttribute("src");
     // let vidname=dom.querySelector(".align-center .pl-2").text;
     log(json.url);
     super({
       id: new PlatformID(PLATFORM, url, config.id),
-      name: json.title,
-      // thumbnails: new Thumbnails(vid.thumbnailUrl.map((a)=>new Thumbnail(a, 720),)),
-      // author:
-      //   user != undefined
-      //     ? new PlatformAuthorLink(
-      //       new PlatformID(PLATFORM, user.getAttribute("href"), config.id), //obj.channel.name, config.id),
-      //       user.querySelector(".name").text, //obj.channel.displayName,
-      //       user.getAttribute("href"), //obj.channel.url,
-      //       "",//
-      //       ""
-      //     )
-      //     : undefined,
-      // datetime: Math.round((new Date(ldJson.uploadDate)).getTime() / 1000),
-      // duration: flashvars.video_duration,
-      // viewCount: views,
-      thumbnails: new Thumbnails(json.thumbnails.map((a)=>new Thumbnail(a, 720))),
+      name: title,
+      thumbnails: new Thumbnails(thumbnails.map((a)=>new Thumbnail(a, 720))),
       url: url,
       isLive: false,
-      description: json.description,
+      description: description,
       video: new VideoSourceDescriptor([
         new VideoUrlSource({
           container: "video/mp4",
           name: "mp4",
-          url: json.url,
+          url: vidurl,
         }),
       ]),
     });
-    let res=http.POST("https://pmvhaven.com/api/v2/videoInput", JSON.stringify({
-      mode: "getRecommended",
-      profile: null,
-      video: json.obj,
-    }),{}, false);
-    if (!res.isOk) {
-      throw new ScriptException("Error trying to load 'https://pmvhaven.com/api/v2/videoInput'");
-    }
-    const json2 = JSON.parse(res.body);
-    if (!json2.recommendedVideos){
-      return;
-    }
-    this.recvids = json2.recommendedVideos.map((a)=>toVideo(a));
-    // let recs=res.body.split("video_related=")[1].split("}];")[0]+"}]";
-    // this.recvids = JSON.parse(recs).map((a)=>{
-    //   let duration = -1;
-    //   try {
-    //     let time = a.d;
-    //     let timenum=parseInt(time.replace("min","").replace("mins",""));
-    //     duration = timenum * 60;
-    //   } catch (e) { }
-    //   return new PlatformVideo({
-    //     id: new PlatformID(
-    //       "XVideos",
-    //       "https://xvideos.com"+a.u,
-    //       config.id
-    //     ),
-    //     name: a.tf,
-    //     thumbnails: new Thumbnails([
-    //       new Thumbnail(a.ip, 720),
-    //     ]),
-    //     //   author: new PlatformAuthorLink(
-    //     //     new PlatformID("SomePlatformName", "SomeAuthorID", config.id),
-    //     //     "SomeAuthorName",
-    //     //     "https://platform.com/your/channel/url",
-    //     //     "../url/to/thumbnail.png"
-    //     //   ),
-    //     //   uploadDate: 1696880568,
-    //     duration: duration,
-    //     //viewCount: parseInt(item.querySelector(".sub-desc").text),
-    //     url: "https://xvideos.com"+a.u,
-    //     isLive: false,
-    // });});
+    // let res=http.POST("https://pmvhaven.com/api/v2/videoInput", JSON.stringify({
+    //   mode: "getRecommended",
+    //   profile: null,
+    //   video: json.obj,
+    // }),{}, false);
+    // if (!res.isOk) {
+    //   throw new ScriptException("Error trying to load 'https://pmvhaven.com/api/v2/videoInput'");
+    // }
+    // const json2 = JSON.parse(res.body);
+    // if (!json2.recommendedVideos){
+    //   return;
+    // }
+    // this.recvids = json2.recommendedVideos.map((a)=>toVideo(a));
   }
 
-  getContentRecommendations() {
-    return new ContentPager(this.recvids, false);
-  }
+  // getContentRecommendations() {
+  //   return new ContentPager(this.recvids, false);
+  // }
 }
 source.getContentRecommendations = (url, initialData) => {
   throw new ScriptException("getContentRecommendations");
@@ -176,18 +195,21 @@ class FeedPager extends ContentPager {
 
 
 function toVideo(a) {
-  const fakeurl=JSON.stringify({
-    type: "pmvhaven",
-    url: a.url,
-    title: a.title,
-    description: a.description,
-    thumbnails: a.thumbnails.filter((b)=>b!="placeholder"),
-    obj:a,
-  });
+  // const fakeurl=JSON.stringify({
+  //   type: "pmvhaven",
+  //   url: a.url,
+  //   title: a.title,
+  //   description: a.description,
+  //   thumbnails: a.thumbnails.filter((b)=>b!="placeholder"),
+  //   obj:a,
+  // });
+  const titleid=a.title.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-");
+  const vidid=titleid+"_"+a._id;
+  const vidurl="https://pmvhaven.com/video/"+vidid;
 return new PlatformVideo({
   id: new PlatformID(
     "PMVHaven",
-    fakeurl,
+    vidurl,
     config.id
   ),
   name: a.title,
@@ -201,7 +223,7 @@ return new PlatformVideo({
   //   uploadDate: 1696880568,
   duration: a.duration,
   viewCount: a.views,
-  url: fakeurl,
+  url: vidurl,
   isLive: false,
 });
 }
