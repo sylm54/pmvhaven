@@ -99,7 +99,7 @@ class HVideo extends PlatformVideoDetails {
     let data=dom.querySelector("script#__NUXT_DATA__").text;
     log("GOT DATA: "+data);
     const json = JSON.parse(data);
-    const apiindex=parseNUXT(json, ["data", "/api/v2/videoInput"]);
+    const apiindex=parseNUXT(json, ["data"]);
     log("GOT APIINDEX: "+JSON.stringify(apiindex));
     const videoindex=parseNUXT(json, ["video"], apiindex);
     log("GOT VIDEOINDEX: "+JSON.stringify(videoindex));
