@@ -69,6 +69,11 @@ function parseNUXT(data, path, index=0) {
       log("Found object");
       return index;
     }
+    const keys=Object.keys(curr);
+    if (keys.length==1){
+      log("Following single key in path "+path);
+      return parseNUXT(data, path, curr[keys[0]])
+    }
     for(const key of Object.keys(curr)){
       if(key==target){
         if(path.length==1){
@@ -149,7 +154,7 @@ class HVideo extends PlatformVideoDetails {
       profile: null,
       video: {
         _id: this.data.id,
-        title: this.data.rawtitle,
+        title: this.data.title,
       },
     }),{}, false);
     if (!res2.isOk) {
