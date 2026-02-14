@@ -228,7 +228,7 @@ class FeedPager extends ContentPager {
       this.results = [];
       return this;
     }
-    const out=json.data.map((a)=>toVideo(a));
+    const out=json.videos.map((a)=>toVideo(a));
     this.results = out;
     return this;
   }
