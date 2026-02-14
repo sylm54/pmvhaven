@@ -217,7 +217,7 @@ class FeedPager extends ContentPager {
       limit: 50,
     }
     let res = undefined;
-    res = http.GET(formatURLQuery("https://pmvhaven.com/api/videos/" + type, obj), {},{}, false);
+    res = http.GET(formatURLQuery("https://pmvhaven.com/api/videos/" + this.type, obj), {},{}, false);
 
     if (!res.isOk) {
       throw new ScriptException("Error trying to load '" + "https://pmvhaven.com/api/v2/search" + "'");
