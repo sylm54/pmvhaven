@@ -137,7 +137,7 @@ class HVideo extends PlatformVideoDetails {
     super({
       id: new PlatformID(PLATFORM, url, config.id),
       name: title,
-      thumbnails: new Thumbnails(thumbnails.map((a)=>new Thumbnail(a, 720))),
+      thumbnails: new Thumbnails([new Thumbnail(thumbnail, 720)]),
       url: url,
       isLive: false,
       description: description,
@@ -244,6 +244,7 @@ function toVideo(a) {
   //   thumbnails: a.thumbnails.filter((b)=>b!="placeholder"),
   //   obj:a,
   // });
+  log(JSON.stringify(a));
   const titleid=a.title.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-");
   const vidid=titleid+"_"+a._id;
   const vidurl="https://pmvhaven.com/video/"+vidid;
@@ -254,7 +255,7 @@ return new PlatformVideo({
     config.id
   ),
   name: a.title,
-  thumbnails: new Thumbnails(a.thumbnails.filter((b)=>b!="placeholder").map((b)=>new Thumbnail(b, 720))),
+  thumbnails: a.thumbnailUrl===undefined?undefined:new Thumbnails([new Thumbnail(a.thumbnailUrl, 720)]),
   //   author: new PlatformAuthorLink(
   //     new PlatformID("SomePlatformName", "SomeAuthorID", config.id),
   //     "SomeAuthorName",
@@ -262,10 +263,26 @@ return new PlatformVideo({
   //     "../url/to/thumbnail.png"
   //   ),
   //   uploadDate: 1696880568,
-  duration: a.duration,
+  duration: parseDuration(a.duration),
   viewCount: a.views,
   url: vidurl,
   isLive: false,
 });
+}
+
+function parseDuration(duration) {
+  if (typeof duration === "number") {
+    return duration;
+  }
+  if (typeof duration === "string") {
+    const parts = duration.split(":").map((a) => parseInt(a));
+    if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+  }
+  return undefined;
 }
 log("LOADED");
